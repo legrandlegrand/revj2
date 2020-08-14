@@ -102,7 +102,7 @@ def keywordParensFromList(l):
 Another alternative is to have these at top level ... """
 def initGlobalGrammar():		
 	#MySQL speciffic, add others later
-	globals()["aggregatesAsList"] = ('avg bit_and bit_or bit_xor count '
+	globals()["aggregatesAsList"] = ('avg bit_and bit_or bit_xor count ff '
 		'group_concat '
 		'first last max min std '
 		'stddev_pop stddev_samp stddev stddevp '
@@ -670,30 +670,7 @@ class Simplifier:
 		oj = loj | roj
 		return oj.transformString(s)
 		
-	"""chop sql into small pieces"""
-	def smallChunksGen(all):
-		crtPos = 0
-		parensNest = 0
-		for (pos, ch) in enumerate(all):
-			if ch == '(':
-				parensNest += 1
-			elif ch == ')':
-				parensNest -= 1
-				if parensNest == 0:
-					yield all[crtPos:pos+1]
-					crtPos = pos+1
-		yield all[crtPos:]
-		
-	def runRemoversOnChunks(self, removers, s):
-		res = []
-		for piece in smallChunksGen(s):
-			res.append(self.runRemovers(removers, piece))
-			
-		res = ' '.join(res)
-		return res
-		#once more on the whole thing ?
-		#return self.runRemovers(res)
-			
+
 		
 	def runRemovers(self, removers, s):
 		x = s
@@ -707,7 +684,7 @@ class Simplifier:
 				x = re.sub("\s*([\+\,])\s*", r"\1", x)
 				
 				x = self.runRegexRemoverConstantOps(x)
-				x = self.runRegexRemoverParensInExpressions(x)
+#ply				x = self.runRegexRemoverParensInExpressions(x)
 				x = self.runRegexRemoverConstEqualConst(x)
 
 				newX = r.transformString(x)
@@ -814,25 +791,19 @@ class Simplifier:
 
 	def process(self, s):
 		x = self.reduceBinops(s)
-		x = self.replaceAggregs(x)
+#ply		x = self.replaceAggregs(x)
 		x = self.reduceOuterJoin(x)
 
-		self.reset()
-		self.buildRemovers()
-
-		res = self.runRemovers(self.removers, x)
-
-#ply	print simplified sql
-#		sqlFile = tempfile.mkstemp('.sql', '', STATICDIR)
-#		os.write(sqlFile[0], res)
-#		os.close(sqlFile[0])
-
-		return self.reduceOrderGroup(res)
+#		self.reset()
+#		self.buildRemovers()
+#		res = self.runRemovers(self.removers, x)
+		
+		return self.reduceOrderGroup(x)
 
 
 def checkIdentifier(x):
 	return ( (x.lower() not in reserved) and 
-		(re.search(aggregatesRe, x) is None) and 
+#ply		(re.search(aggregatesRe, x) is None) and 
 		not (x.startswith("'" + QUOTESYMBOL)) )
 	
 def addAliasIfOK(d, k, v):
@@ -871,7 +842,7 @@ def getLastDot(v):
 	if len(temp) <= 3:	#schema.table.column
 		return temp[-1]
 
-	raise MallformedSQLException('Too may dots in identifier: %s' % s)
+	raise MallformedSQLException('Too many dots in identifier: %s' % s)
 	
 def splitByCommasWithoutParens(s):
 	res = []
@@ -971,16 +942,19 @@ class SingleSelect:
 		asAlias = Suppress(Keyword('as') + ident)
 		noAliases = asAlias.transformString(s)
 
-		for c in columnName.searchString(noAliases):
+#ply		for c in columnName.searchString(noAliases):
 			#single * is a valid ident, Ex count(*)
-			if checkIdentifier(c[0]) and (('*' not in c[0]) or ('.*' in c[0]) ):
+#ply			if checkIdentifier(c[0]) and (('*' not in c[0]) or ('.*' in c[0]) ):
 				#function names are not columns
-				pat = c[0] + reWS + '\('
-				if not re.search(pat, s):
-					self.columns.add(c[0])
+#ply				pat = c[0] + reWS + '\('
+#ply				if not re.search(pat, s):
+#ply					self.columns.add(c[0])
 
-			if c[0] == '*':
-				self.selectStar = True
+#ply			if c[0] == '*':
+#ply				self.selectStar = True
+
+#		self.projectionCols.add(noAliases)
+		self.columns.add(noAliases)
 
 	"""helper for aggregs lambda func"""
 	def aggregLambda(self, x):
@@ -1072,31 +1046,35 @@ class SingleSelect:
 				if exprPart.endswith(' as'):
 					exprPart = exprPart[:-3]
 					
-				withoutAliases.append(exprPart)				
-				
+				withoutAliases.append(exprPart)
+
+#ply
 				if checkIdentifier(aliasPart):
-					tbl = self.findTableOfExpression(exprPart)						
+					tbl = self.findTableOfExpression(exprPart)
 					self.projectionCols.add(tbl + aliasPart)
 										
-					if checkNotExpr(exprPart):
-						addAliasIfOK(self.colAliases, exprPart, aliasPart)					
+#					if checkNotExpr(exprPart):
+#						addAliasIfOK(self.colAliases, exprPart, aliasPart)
+#					else:
+					if tbl == '':
+						self.exprAliases.add(aliasPart)
 					else:
-						if tbl == '':
-							self.exprAliases.add(aliasPart)
-						else:
-							#this is an alias to an expression that depends
-							#only on columns from one table
-							addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
+						#this is an alias to an expression that depends
+						#only on columns from one table
+						addAliasIfOK(self.colAliases, exprPart, aliasPart)
+#						addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
 			except ValueError:
 				#split fails == no alias
-				if checkNotExpr(part) and checkIdentifier(part):
-					self.projectionCols.add(part)
+# ply				if checkNotExpr(part) and checkIdentifier(part):
+# ply					self.projectionCols.add(part)
+				self.projectionCols.add(part)
 				withoutAliases.append(part)
+				self.subprocessSelectColumns(part)
 			
 
-		x = ',' + ','.join(withoutAliases)	#easier grammar
-		self.subprocessSelectColumns(x)
-		self.subprocessAggregs(',' + s)
+#		x = ',' + ','.join(withoutAliases)	#easier grammar
+#		self.subprocessSelectColumns(x)
+#		self.subprocessAggregs(',' + s)
 
 	"""restore constant previously processed by QuoteRemover
 	BETWEEN does not need extra enclosing "'" """
@@ -1521,7 +1499,9 @@ class SingleSelect:
 		
 		tmp = set()
 		for p in self.projectionCols:
-			if p.startswith(alias):
+#ply			if p.startswith(alias):
+#ply pb avec ff(a.id)
+			if alias in p:
 				tmp.add(p)
 			else:
 				tmp.add(alias + p)
@@ -1584,7 +1564,7 @@ class SingleSelect:
 		self.sanityCheckColumns()		
 		self.checkAmbiguousColumns()
 		
-		self.sanityCheckTables()
+#ply a revoir		self.sanityCheckTables()
 		self.addStarToAllTables()
 				
 		return self.tableAliases
@@ -1659,6 +1639,7 @@ class DotOutput:
 	#(if needed, use quoting in labels ..) 
 	def dotSanitize(self, s):
 		return s.replace('$','').replace('.','__')
+#ply destructeur ?		.replace('|','_').replace('\'','_')
 		
 	"""drop table name from count(t.x) and count(DISTINCT t.x)
 	also used for HAVING clauses"""
@@ -1678,7 +1659,10 @@ class DotOutput:
 
 	def formatField(self, c):
 		res = []
-		lc = getLastDot(c).lower()
+#ply pb with  ff(a.id)
+####		lc = getLastDot(c).lower()
+# a revoir pour enlever le prefix table
+		lc = c.lower()
 		#if c in self.ss.joins or c.upper() in self.ss.joins:
 		#optimize : somehow display one column only once
 		
@@ -1743,19 +1727,21 @@ class DotOutput:
 			headerTbl = 'DERIVED TABLE'
 			clr = self.ss.derivedTables[t]
 			
-		res = ['\t%s%s [style=filled, fillcolor=%s, label="{%s | (%s) ' % 
+		res = ['\t%s%s [style=filled, fillcolor=%s, label="%s | (%s) ' % 
 			(formatCluster(clusterNr), self.dotSanitize(a.upper()), self.getColor(clr), 
 			headerTbl, t.upper()) ]
 
 		sortedCols = []
 		for c in self.ss.columns:
-			if getFirstTwoDots(c) == a:
+#ply			if getFirstTwoDots(c) == a:
+# ko avec ff(a.id)
+			if a == c or a + '.' in c: 
 				sortedCols.append(c)
 
 		for c in sorted(sortedCols):
 			res.append('|' + self.formatField(c) )
 
-		res.append('}"];')
+		res.append('"];')
 		return ''.join(res)
 
 	def genNodes(self, clusterNr = 0):
@@ -1795,7 +1781,7 @@ class DotOutput:
 		jCluster = formatCluster(jClusterNr)
 		
 		res = '\t' + iCluster + firstTwoDots_i.upper() + lastDot_i.lower() + \
-			' -> ' + jCluster + firstTwoDots_j.upper() + lastDot_j.lower()
+			' -- ' + jCluster + firstTwoDots_j.upper() + lastDot_j.lower()
 
 		outer = ''
 		if i.isupper() :
@@ -1810,10 +1796,10 @@ class DotOutput:
 
 		if i.isupper() or j.isupper():
 			color = OUTERJOINCOLOR
-#ply edge color should be specified only once
-#		else:
-#			color = 'black'
-			res += ' [color = %s %s]' % (color, outer)
+		else:
+			color = 'black'
+
+		res += ' [color = %s %s]' % (color, outer)
 
 		return res + ';'
 
@@ -1871,10 +1857,10 @@ class DotOutput:
 	def process(self, clusterNr = 0):
 		""" clusterNr == 0 means it's a main graph"""
 		if clusterNr == 0:
-			res = ['graph ', '{',
-                '\tnode [shape=record, fontsize=12];',
-#				'\trankdir=LR;', 
-#				'\tdir=none;',
+			res = ['graph ', '{', '\tnode [shape=record, fontsize=12];',
+				'\tgraph [splines=true];', 
+				'\trankdir=LR;', 
+				'\tdir=none;',
 				'\t\t_dummy [shape=none, label=""];',
 				'']
 		else:
@@ -1882,9 +1868,9 @@ class DotOutput:
 				'\t\tstyle=filled;',
 				'\t\tcolor=%s;' % self.getColor(clusterNr) ,
 				'\t\tnode [shape=record, fontsize=12];',
-#ply				'\t\tgraph [splines=true];', 
-#				'\t\trankdir=LR;', 
-#				'\t\tdir=none;',
+				'\t\tgraph [splines=true];', 
+				'\t\trankdir=LR;', 
+				'\t\tdir=none;',
 				'\t\tlabel="subselect %d";' % clusterNr,
 				'\t\t%s_dummy [shape=none, label=""];' % formatCluster(clusterNr),
 				'']
@@ -1962,11 +1948,6 @@ class SelectAndSubselects:
 	def getSqlStack(self, s):		
 		sqlStack = []
 		tmp = s
-#ply	print original sql (to be compared with simplified
-#		sqlFile = tempfile.mkstemp('.sql', '', STATICDIR)
-#		os.write(sqlFile[0], tmp)
-#		os.close(sqlFile[0])
-        
 		start = -1
 		i = 1 # start numbering subselects from 1. 0 reserved for outermost
 		while start != 0:
@@ -1975,7 +1956,7 @@ class SelectAndSubselects:
 			tmp = tmp[:start] + ' [ %d ] '% i + tmp[end:]
 			
 			i += 1			
-        
+
 		#replace clusterNr of main SQL = 0
 		mainFrame = sqlStack[-1]
 		mainFrame = (0, mainFrame[1])
@@ -2078,12 +2059,10 @@ class SelectAndSubselects:
 				#((graph_as_dot, edges_coming_from_outer_select), projectionCols)
 				tmp = simpleQuery2Dot(x, 0, {}, parentTables)
 				
-#ply				nicerMainGraph = subGraphDotRunner(tmp[0][0], algo)
-				nicerMainGraph = tmp[0][0]
+				nicerMainGraph = subGraphDotRunner(tmp[0][0], algo)
 				assert tmp[0][1] == []
 				res = nicerMainGraph.strip()
-#ply ajout layout ...
-				res = res.replace('graph', 'digraph G {\nlayout=fdp;\nK=1\nsplines=ortho;\nsep=0.2;\nedge[color=blue,arrowtail="none",arrowhead="none"];\nsubgraph cluster_main ')
+				res = res.replace('digraph G', 'digraph G {\nsubgraph cluster_main ')
 				res += '\n}'
 			else:
 				#sub-selects
@@ -2093,9 +2072,8 @@ class SelectAndSubselects:
 				#make it a graph for gvpr processing
 				
 				#((graph_as_dot, edges_coming_from_outer_select), projectionCols)
-#				nicerSubgraph = subGraphDotRunner(
-#					tmp[0][0].replace('subgraph', 'graph'), algo)
-				nicerSubgraph = tmp[0][0]
+				nicerSubgraph = subGraphDotRunner(
+					tmp[0][0].replace('subgraph', 'graph'), algo)
 					
 				#change it back to subgraph
 				nicerSubgraph = nicerSubgraph.replace('digraph G', 
@@ -2144,8 +2122,10 @@ def simpleQuery2Dot(s, clusterNr = 0, parentTables = {}, resultTables = {}):
 
 	resultParentTables = \
 		ss.process(
-			si.process(
-				qr.process(s)), parentTables)
+        s
+#ply			si.process(
+#ply 				qr.process(s)                )
+                , parentTables)
 	res = dot.process(clusterNr)
 	
 	for (k,v) in resultParentTables.items():
@@ -2159,29 +2139,28 @@ def simpleQuery2Dot(s, clusterNr = 0, parentTables = {}, resultTables = {}):
 #there are similar functions in gui.py / webrevj.py
 #those are rendering the final image .. 
 def subGraphDotRunner(dot, algo):
-#	dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
-#	os.write(dotFile[0], dot)
-#   os.close(dotFile[0])
+	dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
+	os.write(dotFile[0], dot)
+	os.close(dotFile[0])
 	
-#	resFile = tempfile.mkstemp('.dot', '', STATICDIR)
-#	os.close(resFile[0])
+	resFile = tempfile.mkstemp('.dot', '', STATICDIR)
+	os.close(resFile[0])
 		
-	#cmd = '%s "%s"| gvpr -f"%s" > "%s"'  % (algo, dotFile[1], DIRG, resFile[1])
-	#cmd = '%s "%s" > "%s"'  % (algo, dotFile[1], resFile[1])
-#	cmd = 'copy "%s" "%s"'  % (dotFile[1], resFile[1])
-#	os.system(cmd)
+	#cmd = '%s "%s"| gvpr -f"%s" -o"%s"'  % (algo, dotFile[1], DIRG, resFile[1])
+	cmd = '%s "%s"| gvpr -f"%s" > "%s"'  % (algo, dotFile[1], DIRG, resFile[1])
+	os.system(cmd)
 
-#	f = open(resFile[1])
-#	res = f.readlines()
-#	f.close()	
+	f = open(resFile[1])
+	res = f.readlines()
+	f.close()	
 	
-#	os.remove(dotFile[1])
-#	os.remove(resFile[1])
+#ply	os.remove(dotFile[1])
+#ply	os.remove(resFile[1])
 	
-#	assert len(res) > 3
+	assert len(res) > 3
 	
-#	return ''.join(res)
-	return ''.join(dot)
+	return ''.join(res)
+
 
 #main entry point for GUI
 def query2Dot(s, algo = DEFALGO):
