@@ -1,0 +1,79 @@
+SanityChecker
+	process()
+		checkParens()
+		#checkQuotes ?
+
+QuoteRemover(SanityChecker)
+	process()
+		removeQuoteEscapes()
+		removeInClause()
+		removeBetween()
+		removeConst()
+		removeQuotedIdent()
+		SanityChecker.checkParens()
+
+Simplifier
+	process()
+		reduceLongOperands()
+		reduceOuterJoin()
+		reset()
+		makeNeededFuncs()
+		buildRemovers()
+			buildFuncRemovers()
+		runRemovers()
+		reduceOrderGroup()
+
+SingleSelect
+	process()
+		QuoteRemover.getQuotedConstsDict()
+		processColAliases()
+		for i in xrange(len(parts)-3):
+			processTables():
+				subprocessTablesAliases()
+				subprocessAnsiJoins()
+					subprocessJoins()
+			
+			processWhereGroupOrder()
+				subprocessAggregs()
+					aggregLambda()
+						reverseComparisonSign()
+			subprocessFilters()
+				reverseComparisonSign()
+			subprocessJoins()
+		
+		aliasSingleSelectCols()
+		addColumnsFromOthers()
+		sanityCheckTables()
+		checkAmbiguousColumns()
+		addStarToAllTables()
+
+DotOutput
+	process()
+		genNodes()
+			formatTable()
+				formatField()
+					quoteCompars()
+		genEdges()
+			formatJoin()
+
+
+SelectAndSubselects
+	process()
+		getSqlStack()
+			getMostNested()
+				getSubselectLen()
+				parenCount()
+		simpleQuery2Dot()
+		subGraphDotRunner()
+		
+simpleQuery2Dot()	
+	SingleSelect.process(
+		Simplifier.process(
+			QuoteRemover.process()))
+	DotOutput.process()
+	
+
+#main entry point
+query2Dot()
+	SelectAndSubselects.process()
+		

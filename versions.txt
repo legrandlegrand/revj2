@@ -1,0 +1,193 @@
+v0.01 (2008-08-03)
+Program parses one SQL query and generates a diagram including joins, where conditions, aggregations, group by etc. Source code includes testing code with sample queries.
+
+
+v0.02 (2008-08-06)
+The next version will have a different approach to reduce all functions based on regular expression "func_name(params*)" instead of enumerating known functions for each SQL dialect. This will also process ex: NVL(SUM(x))
+
+
+v0.03 (2008-08-07)
+Added end of line comments ex: " ..x=2 -- comment" .Now <> comparison apears correctly in diagrams (previosuly showing only <)
+
+
+v0.04 (2008-08-08)
+Support for IN clause "xx in (1,2,3)" .Edge color for outer joins is fixed in dir.g (Thanks Emden) -Support for outer joins syntax "x=y (+)"
+
+
+v0.05 (2008-08-11)
+Added select * , table.* Added Like operator. Sometimes text was clipped in Graphviz. Now fixed by specifying textsize
+
+
+v0.06 (2008-08-14)
+Added BETWEEN clause ex: 'x between 1 and 2'
+
+
+v0.07 (2008-08-15)
+bugfix for "class Simplifier()", so it runs also in Python 2.4
+
+
+v0.08 (2008-08-20)
+Added a simple graphical interface
+
+
+v0.09 (2008-08-27)
+The "Outer side" of an outer join is identified with a big dot
+
+
+v0.10 (2008-08-28)
+bugfix: edges had only head but no tail, this caused gvpr script to crash
+
+
+v0.11 (2008-09-01)
+Added support for 'x NOT IN (1,2,3)' and 'x NOT BETWEEN 1 and 2'. Added a menu in the GUI to increase the distance between nodes for cluttered diagrams
+
+
+v0.12 (2008-09-06)
+Now it really runs on Unix (previosuly only Mac and Win). Modified the GUI to report errors and display welcome note (only if installed correctly)
+
+
+v0.12.5 (2008-09-08)
+It is no longer needed to maintain a list of SQL-specific functions. Now functions on top of aggregates are processed, EX "nvl(sum(x), 0) ".
+
+
+v0.14 (2008-09-09)
+Added a simple web app based on CherryPy . There is a demo at www.snowflakejoins.com/revj
+
+
+v0.15 (2008-09-22)
+Added partial support for subselects. Test code is in own file.
+
+
+v0.16 (2008-10-07)
+Subselects are renderred in a nicer way. Note that only "correlated subqueries" are supported. Algorithm is temporarily disabled, always "neato" is used.
+
+
+v0.17 (2008-10-10)
+Initial support for "xx in (SELECT..)" style subselects
+
+
+v0.18 (2008-11-09)
+Column aliases appear now in the diagram. Restored the "algorithm" parameter when generating graphs
+
+
+v0.19 (2008-11-30)
+Support for mixing where clause fragments into ANSI joins Ex: " select * from t1 left join t2 on t1.b=t2.x and t1.c=1 left join t3 on t1.b=t3.p where t1.c=2"
+
+
+v0.20 (2008-12-14)
+support for multiline comments /* */
+
+
+v0.20a (2008-12-14)
+bugfix: raise exception on unsupported UNION keyword. Create directory ./static (if missing)
+
+
+v0.21 (2009-03-31)
+"select column from one_table" does not require anymore qualifying the columns with table/alias name. Support for CASE statements
+
+
+v0.22 (2009-04-13)
+Characters $@ allowed in identifiers; dollar expansion for identifiers ex: ${table} ; use square brackets for aliases in addition to double quotes; added more operators !> !> ^= %= ; added more aggregation functions
+
+
+v0.23 (2009-04-16)
+Bugfix: now works if path contains spaces (for example under "Documents and Settings" folder).
+
+
+v0.24 (2009-04-23)
+Less clutter in output . Ex in "select * from t1 inner join t2 on t1.a=t2.b where t1.a=4" there are no more separate entries for "a=4" and for the join -code refactoring
+
+
+v0.25 (2009-04-28)
+Performance improvement. For queries over 20 table runtime can decrease to more than 50%
+
+v0.26 (2009-05-17)
+Added support for USING ex: .. from table1 inner join table2 using (id) .. . Bugfixes: Raise AmbiguousColumnException if there are no more tabes in one select, and the columns are not qualified . Empty string constat did not work previously. Remove Postgres-speciffic slice operators (ex birthday[1:4]). Better error reporting for mismatched parentheses and quotes. Allow spaces in alias names 
+
+
+v0.27 (2009-05-19)
+Bugfix: mixed ANSI joins and tables. EX: FROM TABLE_1 T1 LEFT JOIN TABLE_1A T1A ON T1.ID=T1A.ID, TABLE_2
+
+
+v0.28 (2009-06-01)
+Added support for ORDER BY and DISTINCT in aggrgates ex: COUNT(DISTINCT). Note that the general SELECT DISTINCT is not yet implemented
+
+v0.29 (2009-06-07)
+If possible, aliases are displayed inside the tables they belong (previously they were displayed each in it's own frame). Some progress with subselects, to be finalized later.
+
+v0.30 (2009-06-16)
+The sub-queries look better ex: ..where x in (select y from t) . Some progress with derived tables ex: select .. from (select ..) as derived_1, (select ..) as derived_2 ... . Nested subselects do not work yet. If same table appears in more subselects, diagram is wrong.
+
+v0.31 (2009-06-20)
+Fixed bugs related to .. join using(a,b,..) . The "using" clause works correctly only when joining two tables.
+
+v0.32 (2009-06-24)
+Enhancements: expression aliases are displayed consistently "... AS alias". Better error detection for duplicated "from" etc. Bugfixes
+
+v0.33 (2009-06-28)
+"As" becomes optional for column aliases. Bug fixes: "select count(*)" displays correctly. "Having" clause was not displayed.  
+
+v0.34 (2009-07-03)
+Support for "ORDER BY x DESC". Fixed bugs related to "case" . 
+
+v0.35 (2009-07-05)
+If aggregates are found in multiple tables than issue warning for fan and/or chasm trap. Bugfixes related to ORDER BY alias
+
+v0.36 (2011-02-11)
+Bugfix: remove multiple /* */ comments
+
+v0.37 (2011-02-23)
+Bugfix: "Select distinct a.id from" a does not display id field in graph
+
+v0.38 (2011-03-09)
+bugfix: support for Oracle bind variables ex a = :1
+bugfix: "select field from schema.table" failed when there was no table alias or explicit table.field
+
+v0.39 (2011-03-17)
+Better parsing of nested SQL statements
+bugfix: Field a.b is now recognised in "SELECT a.id from a where a.b in (select c from d)"
+
+v0.40 (2011-03-21)
+Linking subselects and their aliases. Ex:
+select fact.*, region.name, product.name
+from fact,
+		(select name, id from translation where lang='EN' and type='region') region,
+		(select name, id from translation where lang='EN' and type='product') product
+where 
+	fact.region_id = region.id and
+	fact.product_id = product.id;
+
+v0.41 (2011-03-30)
+bufix: incorect fan trap warning in SELECT id,sum(val1),sum(val2) from tab group by id 
+bugfix: properly reduce constants in "select nvl(a111 + 2222, 3333, 4444) from table"
+
+v0.42 (2011-04-03)
+Improved simplifier (ex: not complaining about column concat, wich is a function). 
+Improved subselects. ex:
+select *
+ from
+ (select * from ta A,tb B where A.x=B.y) D1,
+ (select * from ta A,tb B where A.x=B.y) D2
+
+v0.43 (2011-04-08)
+Fixed missing edge for nested IN (subselect..) . Ex:
+select * from (select A.id from A where A.id IN (select B.id from B where v=5)) D1 
+
+v0.44 (2011-04-13)
+Fixed anonymous subselects. Ex: select * from (select A.id from A)
+Long IN clauses are truncated. Ex: table.field in (1,2,3,4...999) 
+
+v0.45 (2011-05-15)
+Added support for UNION. Fixed exception during processing of "select o.x from out o where o.y in ( select * from t1 at1  )"
+
+v0.46 (2011-05-18)
+Fixed union at top level. Fixed column without alias and IN subselect, Ex "SELECT * FROM A WHERE x IN  (SELECT y FROM B )" 
+
+v0.47 (2011-05-28)
+Fixed case sensitive UNION SELECT . Ex "SELECT a FROM A UNION seLECT b FROM B" now works.
+
+v0.48 (2011-11-17)
+Fixed union all. Ex: "select t1.a from T1 union all select t2.b from T2 union all ..". Fixed functions without parameters and parens, ex: "Select .. where t1.x=sysdate"
+
+v0.49 (2011-12-06)
+Fixed "cast(x as integer)" that previously produced an error

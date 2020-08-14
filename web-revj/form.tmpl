@@ -1,0 +1,121 @@
+<html>
+<head>
+<meta name="keywords" content="SQL star snowflake schema diagram" />
+<title>Reverse Snowflake Joins-online demo</title>
+<style type="text/css">
+<!--
+body {
+  margin: 0px;
+  padding: 0px;
+}
+#header {
+  background: #fff;
+  width: 100%;
+}
+#rightcol {
+  background: #fff;
+  float: right;
+  width: 19%;
+  height: 500px;
+}
+#content {
+  background: #fff;
+  float: left;
+  width: 80%;
+  height: 500px;
+}
+#footer {
+  background: #fff;
+  clear: both;
+  width: 100%;
+}
+-->
+</style>
+</head>
+<body>
+
+<table border="0">
+<tr>
+<td>
+
+<h1>Reverse Snowflake Joins </h1>
+<h2>A tool to document and understand SQL queries</h2>
+<h3>(For the moment, subselects are not fully working. Use "one-pass" for subselects. Always use table aliases, without connecting to your database the tool has no idea which field is in which table)</h3>
+<p>You can get the BSD-licensed code from 
+<a href="http://sourceforge.net/projects/revj/">http://sourceforge.net/projects/revj/</a> </p>
+
+
+<div id="content">
+
+<font color="red" > ${err} </font>
+
+<FORM action="index" method="post">
+  <P> 	
+   <TEXTAREA name="sql" rows="20" cols="60">${sql}</TEXTAREA>
+  </P>
+  
+  <P>Algorithm (start with neato)
+  <SELECT name="algo">
+      <OPTION ${neato}>neato</OPTION>
+      <OPTION ${fdp}>fdp</OPTION>
+      <OPTION ${twopi}>twopi</OPTION>
+      <OPTION ${circo}>circo</OPTION>
+      <OPTION ${one}>one-pass</OPTION>
+  </SELECT> 
+  </P>
+  
+  <P> Distance between nodes 
+  <SELECT name="dist">
+      <OPTION ${d1}>1</OPTION>
+      <OPTION ${d2}>2</OPTION>
+      <OPTION ${d3}>3</OPTION>
+  </SELECT>
+  </P>
+
+  <INPUT type="submit" value="Generate diagram">
+</FORM>
+</td>
+
+<td>
+<script type="text/javascript"><!--
+google_ad_client = "pub-9961697671955864";
+/* 120x600, t+i */
+google_ad_slot = "5767621257";
+google_ad_width = 120;
+google_ad_height = 600;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+
+</td></tr></table>
+
+
+</div>
+
+
+<div id="footer">
+<img src="${png}" alt="diagram" />
+
+<P>Powered by:
+
+<img src="/static/python.png" /> <a href="http://www.python.org/">Python</a> ,
+
+<img src="http://www.graphviz.org/favicon.ico" /><a href="http://www.graphviz.org/">Graphviz</a> ,
+
+<a href="http://pyparsing.wikispaces.com/">Pyparsing</a> and
+
+<img src="/static/cherrypy.ico" /><a href="http://www.cherrypy.org/">CherryPy</a>
+
+</P>
+
+<p style="text-align:right">
+ <a href='http://www.webfaction.com'>
+ <img src='http://blog.webfaction.com/static/visuals/110x32-hosted-button-bg.png' alt='Hosted by WebFaction' style="border:none;" /></a>
+</p>
+
+</div>
+
+</body>
+</html>
