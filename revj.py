@@ -348,7 +348,7 @@ class QuoteRemover(SanityChecker):
 		res =  res.replace('::', '')		
 		
 		#drop the slicing operator x[2] or x[2:4]
- 		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
+		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
 		
 		return res
 				
@@ -821,7 +821,12 @@ class Simplifier:
 		self.buildRemovers()
 
 		res = self.runRemovers(self.removers, x)
-		
+
+#ply	print simplified sql
+#		sqlFile = tempfile.mkstemp('.sql', '', STATICDIR)
+#		os.write(sqlFile[0], res)
+#		os.close(sqlFile[0])
+
 		return self.reduceOrderGroup(res)
 
 
@@ -1738,7 +1743,7 @@ class DotOutput:
 			headerTbl = 'DERIVED TABLE'
 			clr = self.ss.derivedTables[t]
 			
-		res = ['\t%s%s [style=filled, fillcolor=%s, label="%s | (%s) ' % 
+		res = ['\t%s%s [style=filled, fillcolor=%s, label="{%s | (%s) ' % 
 			(formatCluster(clusterNr), self.dotSanitize(a.upper()), self.getColor(clr), 
 			headerTbl, t.upper()) ]
 
@@ -1750,7 +1755,7 @@ class DotOutput:
 		for c in sorted(sortedCols):
 			res.append('|' + self.formatField(c) )
 
-		res.append('"];')
+		res.append('}"];')
 		return ''.join(res)
 
 	def genNodes(self, clusterNr = 0):
@@ -1790,7 +1795,7 @@ class DotOutput:
 		jCluster = formatCluster(jClusterNr)
 		
 		res = '\t' + iCluster + firstTwoDots_i.upper() + lastDot_i.lower() + \
-			' -- ' + jCluster + firstTwoDots_j.upper() + lastDot_j.lower()
+			' -> ' + jCluster + firstTwoDots_j.upper() + lastDot_j.lower()
 
 		outer = ''
 		if i.isupper() :
@@ -1805,10 +1810,10 @@ class DotOutput:
 
 		if i.isupper() or j.isupper():
 			color = OUTERJOINCOLOR
-		else:
-			color = 'black'
-
-		res += ' [color = %s %s]' % (color, outer)
+#ply edge color should be specified only once
+#		else:
+#			color = 'black'
+			res += ' [color = %s %s]' % (color, outer)
 
 		return res + ';'
 
@@ -1866,10 +1871,10 @@ class DotOutput:
 	def process(self, clusterNr = 0):
 		""" clusterNr == 0 means it's a main graph"""
 		if clusterNr == 0:
-			res = ['graph ', '{', '\tnode [shape=record, fontsize=12];',
-				'\tgraph [splines=true];', 
-				'\trankdir=LR;', 
-				'\tdir=none;',
+			res = ['graph ', '{',
+                '\tnode [shape=record, fontsize=12];',
+#				'\trankdir=LR;', 
+#				'\tdir=none;',
 				'\t\t_dummy [shape=none, label=""];',
 				'']
 		else:
@@ -1877,9 +1882,9 @@ class DotOutput:
 				'\t\tstyle=filled;',
 				'\t\tcolor=%s;' % self.getColor(clusterNr) ,
 				'\t\tnode [shape=record, fontsize=12];',
-				'\t\tgraph [splines=true];', 
-				'\t\trankdir=LR;', 
-				'\t\tdir=none;',
+#ply				'\t\tgraph [splines=true];', 
+#				'\t\trankdir=LR;', 
+#				'\t\tdir=none;',
 				'\t\tlabel="subselect %d";' % clusterNr,
 				'\t\t%s_dummy [shape=none, label=""];' % formatCluster(clusterNr),
 				'']
@@ -1957,6 +1962,11 @@ class SelectAndSubselects:
 	def getSqlStack(self, s):		
 		sqlStack = []
 		tmp = s
+#ply	print original sql (to be compared with simplified
+#		sqlFile = tempfile.mkstemp('.sql', '', STATICDIR)
+#		os.write(sqlFile[0], tmp)
+#		os.close(sqlFile[0])
+        
 		start = -1
 		i = 1 # start numbering subselects from 1. 0 reserved for outermost
 		while start != 0:
@@ -1965,7 +1975,7 @@ class SelectAndSubselects:
 			tmp = tmp[:start] + ' [ %d ] '% i + tmp[end:]
 			
 			i += 1			
-
+        
 		#replace clusterNr of main SQL = 0
 		mainFrame = sqlStack[-1]
 		mainFrame = (0, mainFrame[1])
@@ -2068,10 +2078,12 @@ class SelectAndSubselects:
 				#((graph_as_dot, edges_coming_from_outer_select), projectionCols)
 				tmp = simpleQuery2Dot(x, 0, {}, parentTables)
 				
-				nicerMainGraph = subGraphDotRunner(tmp[0][0], algo)
+#ply				nicerMainGraph = subGraphDotRunner(tmp[0][0], algo)
+				nicerMainGraph = tmp[0][0]
 				assert tmp[0][1] == []
 				res = nicerMainGraph.strip()
-				res = res.replace('digraph G', 'digraph G {\nsubgraph cluster_main ')
+#ply ajout layout ...
+				res = res.replace('graph', 'digraph G {\nlayout=fdp;\nK=1\nsplines=ortho;\nsep=0.2;\nedge[color=blue,arrowtail="none",arrowhead="none"];\nsubgraph cluster_main ')
 				res += '\n}'
 			else:
 				#sub-selects
@@ -2081,8 +2093,9 @@ class SelectAndSubselects:
 				#make it a graph for gvpr processing
 				
 				#((graph_as_dot, edges_coming_from_outer_select), projectionCols)
-				nicerSubgraph = subGraphDotRunner(
-					tmp[0][0].replace('subgraph', 'graph'), algo)
+#				nicerSubgraph = subGraphDotRunner(
+#					tmp[0][0].replace('subgraph', 'graph'), algo)
+				nicerSubgraph = tmp[0][0]
 					
 				#change it back to subgraph
 				nicerSubgraph = nicerSubgraph.replace('digraph G', 
@@ -2146,28 +2159,29 @@ def simpleQuery2Dot(s, clusterNr = 0, parentTables = {}, resultTables = {}):
 #there are similar functions in gui.py / webrevj.py
 #those are rendering the final image .. 
 def subGraphDotRunner(dot, algo):
-	dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
-	os.write(dotFile[0], dot)
-	os.close(dotFile[0])
+#	dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
+#	os.write(dotFile[0], dot)
+#   os.close(dotFile[0])
 	
-	resFile = tempfile.mkstemp('.dot', '', STATICDIR)
-	os.close(resFile[0])
+#	resFile = tempfile.mkstemp('.dot', '', STATICDIR)
+#	os.close(resFile[0])
 		
-	#cmd = '%s "%s"| gvpr -f"%s" -o"%s"'  % (algo, dotFile[1], DIRG, resFile[1])
-	cmd = '%s "%s"| gvpr -f"%s" > "%s"'  % (algo, dotFile[1], DIRG, resFile[1])
-	os.system(cmd)
+	#cmd = '%s "%s"| gvpr -f"%s" > "%s"'  % (algo, dotFile[1], DIRG, resFile[1])
+	#cmd = '%s "%s" > "%s"'  % (algo, dotFile[1], resFile[1])
+#	cmd = 'copy "%s" "%s"'  % (dotFile[1], resFile[1])
+#	os.system(cmd)
 
-	f = open(resFile[1])
-	res = f.readlines()
-	f.close()	
+#	f = open(resFile[1])
+#	res = f.readlines()
+#	f.close()	
 	
-	os.remove(dotFile[1])
-	os.remove(resFile[1])
+#	os.remove(dotFile[1])
+#	os.remove(resFile[1])
 	
-	assert len(res) > 3
+#	assert len(res) > 3
 	
-	return ''.join(res)
-
+#	return ''.join(res)
+	return ''.join(dot)
 
 #main entry point for GUI
 def query2Dot(s, algo = DEFALGO):
