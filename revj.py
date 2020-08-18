@@ -790,9 +790,9 @@ class Simplifier:
 		self.removers = []
 
 	def process(self, s):
-		x = self.reduceBinops(s)
+#ply		x = self.reduceBinops(s)
 #ply		x = self.replaceAggregs(x)
-		x = self.reduceOuterJoin(x)
+		x = self.reduceOuterJoin(s)
 
 #		self.reset()
 #		self.buildRemovers()
@@ -1053,16 +1053,17 @@ class SingleSelect:
 					tbl = self.findTableOfExpression(exprPart)
 					self.projectionCols.add(tbl + aliasPart)
 										
-#					if checkNotExpr(exprPart):
-#						addAliasIfOK(self.colAliases, exprPart, aliasPart)
-#					else:
-					if tbl == '':
-						self.exprAliases.add(aliasPart)
+					if checkNotExpr(exprPart):
+						addAliasIfOK(self.colAliases, exprPart, aliasPart)
 					else:
+						if tbl == '':
+							self.exprAliases.add(aliasPart)
+						else:
 						#this is an alias to an expression that depends
 						#only on columns from one table
-						addAliasIfOK(self.colAliases, exprPart, aliasPart)
-#						addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
+							addAliasIfOK(self.colAliases, exprPart, aliasPart)
+#							addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
+# ply add some kind of tablesanitycheck, to be able to raise an exception when table from table.column != from the one in from clause 
 			except ValueError:
 				#split fails == no alias
 # ply				if checkNotExpr(part) and checkIdentifier(part):
@@ -1370,30 +1371,38 @@ class SingleSelect:
 		if reservedWord == 'having':
 			self.subprocessAggregs(s)
 			
+#ply verifier si les colonnes etaient triees
 		#' '_'*10 appended at the end of the column to show ORDER DESC
 		if reservedWord == 'order_by':
 			if s[-1] == ';':
 				s = s[:-1]
-			s = ',' + s + ','
-			s = s.replace(' desc,', ORDER_DESC_SUFFIX + ',')
-					
-		for c,start,end in columnName.scanString(s):
-			if checkIdentifier(c[0]) and \
-					(('*' not in c[0]) or ('.*' in c[0]) ) and \
-					(len(compar.searchString(c[0])) == 0):			
+                s = ' ' + s  
+#			s = ',' + s + ','
+#			s = s.replace(' desc,', ORDER_DESC_SUFFIX + ',')
+
+		for part in splitByCommasWithoutParens(s):
+# a voir 
+# gestion * qui donne un +, .* est correct
+# et champ vide : <> ORDER BY
+#ply		for c,start,end in columnName.scanString(s):
+#			if checkIdentifier(c[0]) and \
+#					(('*' not in c[0]) or ('.*' in c[0]) ) and \
+#					(len(compar.searchString(c[0])) == 0):
 				if reservedWord == 'group_by':
-					self.groups.add(c[0])
+#					self.groups.add(c[0])
+					self.groups.add(part)
 				elif reservedWord == 'order_by':
-					if c[0].endswith(ORDER_DESC_SUFFIX):
+#					if c[0].endswith(ORDER_DESC_SUFFIX):
 						#check what is before
-						if s[:start].strip().endswith(','):
+#						if s[:start].strip().endswith(','):
 							#ex: ...,c desc, ...
-							self.orders.add(c[0])
-						else:
+#							self.orders.add(c[0])
+#						else:
 							#ex: ...a+b desc ...
-							self.orders.add(c[0][:-len(ORDER_DESC_SUFFIX)])
-					else:
-						self.orders.add(c[0])
+#							self.orders.add(c[0][:-len(ORDER_DESC_SUFFIX)])
+#					else:
+#						self.orders.add(c[0])
+					self.orders.add(part)
 
 
 	"""table from table.field must match with schema.table"""
@@ -1638,7 +1647,7 @@ class DotOutput:
 	#remove funny chars from graphviz edge and node names
 	#(if needed, use quoting in labels ..) 
 	def dotSanitize(self, s):
-		return s.replace('$','').replace('.','__')
+		return s.replace('$','').replace('.','__').replace('|','_').replace('\'','_')
 #ply destructeur ?		.replace('|','_').replace('\'','_')
 		
 	"""drop table name from count(t.x) and count(DISTINCT t.x)
@@ -1657,12 +1666,15 @@ class DotOutput:
 			
 		return fld[:lParenOrSpace+1] + fld[prevDot+1:]
 
-	def formatField(self, c):
+	def formatField(self, c, a):
 		res = []
 #ply pb with  ff(a.id)
 ####		lc = getLastDot(c).lower()
 # a revoir pour enlever le prefix table
-		lc = c.lower()
+		if c.startswith(a + '.'):
+			lc = getLastDot(c).lower()
+		else:
+			lc = c.lower()
 		#if c in self.ss.joins or c.upper() in self.ss.joins:
 		#optimize : somehow display one column only once
 		
@@ -1739,7 +1751,7 @@ class DotOutput:
 				sortedCols.append(c)
 
 		for c in sorted(sortedCols):
-			res.append('|' + self.formatField(c) )
+			res.append('|' + self.formatField(c,a) )
 
 		res.append('"];')
 		return ''.join(res)
@@ -2122,10 +2134,9 @@ def simpleQuery2Dot(s, clusterNr = 0, parentTables = {}, resultTables = {}):
 
 	resultParentTables = \
 		ss.process(
-        s
-#ply			si.process(
+			si.process(
+				s), parentTables)
 #ply 				qr.process(s)                )
-                , parentTables)
 	res = dot.process(clusterNr)
 	
 	for (k,v) in resultParentTables.items():
