@@ -1,0 +1,200 @@
+digraph call_tree
+{
+layout=fdp
+
+initGlobalGrammar -> keywordParensFromList
+initGlobalGrammar -> keywordFromList
+
+
+checkParensHelper -> BadParensException
+checkParensHelper -> BadParensException
+checkParens -> quoteCounter
+checkParens -> BadParensException
+checkParens -> quoteCounter
+checkParens -> BadParensException
+checkParens -> checkParensHelper
+checkParens -> checkParensHelper
+checkParens -> checkParensHelper
+
+#class QuoteRemover
+
+removeUnknown -> removeMySQLdialect
+removeUnknown -> removeMSdialect
+removeUnknown -> removePGdialect
+removeUnknown -> removeCaseWhen
+removeUnknown -> removeSelectDistinct
+removeConst -> dictInsertHelper
+removeInClause -> dictInsertHelper
+removeInClause -> dictInsertHelper
+removeBetween -> dictInsertHelper
+removeBetween -> dictInsertHelper
+removeQuotedIdent -> BadIdentException
+removeQuotedIdent -> BadParensException
+QuoteRemover_process -> reset
+QuoteRemover_process -> removeComments
+QuoteRemover_process -> removeCast
+QuoteRemover_process -> removeSquareBrackets
+QuoteRemover_process -> removeCurlyBraces
+QuoteRemover_process -> removeUTF
+QuoteRemover_process -> removeQuoteEscapes
+QuoteRemover_process -> removeTrueFalse
+QuoteRemover_process -> removeInClause
+QuoteRemover_process -> removeBetween
+QuoteRemover_process -> removeNOTLike
+QuoteRemover_process -> replaceFuncsNoParens
+QuoteRemover_process -> removeUnknown
+QuoteRemover_process -> removeConst
+QuoteRemover_process -> removeQuotedIdent
+QuoteRemover_process -> checkParens
+
+#class Simplifier
+
+__init__ -> reset
+replaceAggregs -> keywordFromList
+replaceAggregs -> distinctAggregsHelper
+runRemovers -> runRegexRemoverConstantOps
+runRemovers -> runRegexRemoverParensInExpressions
+runRemovers -> runRegexRemoverConstEqualConst
+Simplifier_process -> reduceBinops
+Simplifier_process -> replaceAggregs
+Simplifier_process -> reduceOuterJoin
+Simplifier_process -> reset
+Simplifier_process -> buildRemovers
+Simplifier_process -> runRemovers
+Simplifier_process -> reduceOrderGroup
+addAliasIfOK -> checkIdentifier
+addAliasIfOK ->	addAlias
+getFirstTwoDots -> MallformedSQLException
+getLastDot -> MallformedSQLException
+
+#class SingleSelect
+
+__init__ -> reset
+sanityCheckColumns -> REVJProcessingException
+sanityCheckColumns -> REVJProcessingException
+checkAmbiguousColumns -> AmbiguousColumnException(
+subprocessSelectColumns -> checkIdentifier
+aggregLambda -> reverseComparisonSign
+aggregLambda -> addAliasIfOK
+aggregLambda -> replaceConstsWithOrig
+subprocessAggregs -> aggregLambda
+findTableOfExpression -> getFirstTwoDots
+processColAliases -> splitByCommasWithoutParens
+processColAliases -> checkIdentifier
+processColAliases -> findTableOfExpression
+processColAliases -> checkNotExpr
+processColAliases -> addAliasIfOK
+processColAliases -> subprocessSelectColumns
+replaceConstsWithOrig -> REVJProcessingException
+reverseComparisonSign -> negateSign
+subprocessFilters -> reverseComparisonSign
+subprocessFilters -> replaceConstsWithOrig
+subprocessFilters -> replaceConstsWithOrig
+subprocessFilters -> replaceConstsWithOrig
+subprocessSubselectAlias -> addAliasIfOK
+subprocessAnsiJoins -> addTableEmptyAlias
+subprocessAnsiJoins -> subprocessJoins
+subprocessAnsiJoins -> subprocessFilters
+subprocessAnsiJoinsUsing -> addTableEmptyAlias
+subprocessAnsiJoinsUsing -> addTableEmptyAlias
+subprocessAnsiJoinsUsing -> subprocessJoins
+subprocessCrossJoin -> addTableEmptyAlias
+subprocessCrossJoin -> addTableEmptyAlias
+subprocessTablesAliases	-> addTableEmptyAlias
+subprocessDerivedTables -> checkIdentifier
+subprocessDerivedTables -> addAliasIfOK
+processTables -> NaturalJoinException
+processTables -> subprocessDerivedTables
+processTables -> subprocessAnsiJoinsUsing
+processTables -> subprocessMixedTablesAndAnsiJoins
+processTables -> subprocessCrossJoin
+processTables -> subprocessAnsiJoins
+subprocessMixedTablesAndAnsiJoins -> subprocessTablesAliases
+processWhereGroupOrderHaving -> subprocessAggregs
+sanityCheckTables -> getFirstTwoDots
+sanityCheckTables -> getLastDot
+sanityCheckTables -> MallformedSQLException
+SingleSelect_process -> reset
+SingleSelect_process -> revQuotedConsts
+SingleSelect_process -> getQuotedConstsDict
+SingleSelect_process -> subprocessUnions
+SingleSelect_process -> MultipleSelectsException
+SingleSelect_process -> AmbiguousColumnException
+SingleSelect_process -> MallformedSQLException
+SingleSelect_process -> processColAliases
+SingleSelect_process -> processTables
+SingleSelect_process -> subprocessSubselectAlias
+SingleSelect_process -> processWhereGroupOrderHaving
+SingleSelect_process -> subprocessFilters
+SingleSelect_process -> subprocessJoins
+SingleSelect_process -> subprocessInSubselect
+SingleSelect_process -> aliasSingleSelectCols
+SingleSelect_process -> addColumnsFromOthers
+SingleSelect_process -> sanityCheckColumns		
+SingleSelect_process -> checkAmbiguousColumns
+SingleSelect_process -> sanityCheckTables
+SingleSelect_process -> addStarToAllTables
+
+#class DotOutput:
+
+isInParent -> extractParent
+formatField -> getLastDot
+formatField -> dotSanitize
+formatField -> dotUnQuote
+formatField -> DistinctFieldFormatter
+formatField -> dotUnQuote
+formatField -> DistinctFieldFormatter
+formatField -> unquoteSpaceInAlias
+formatTable -> dotSanitize
+formatTable -> formatCluster
+formatTable -> dotSanitize
+formatTable -> getColor
+formatTable -> formatField
+genNodes -> formatTable
+getFirstLastDots -> getLastDot
+getFirstLastDots -> dotSanitize
+getFirstLastDots -> getFirstTwoDots
+formatJoin -> getFirstLastDots
+formatJoin -> formatCluster
+genEdges -> isInParent
+genEdges -> getFirstTwoDots
+genEdges -> formatJoin
+genEdges -> genSubselectEdges
+genEdges -> formatCluster
+genSubselectEdges -> formatCluster
+checkFanChasmTraps -> getFirstTwoDots
+DotOutput_process -> getColor
+DotOutput_process -> formatCluster
+DotOutput_process -> genNodes
+DotOutput_process -> genExprAliasNodes
+DotOutput_process -> genEdges
+DotOutput_process -> checkFanChasmTraps
+
+#class SelectAndSubselects
+
+getMostNested -> parenCount
+getMostNested -> getSubselectLen
+
+getSqlStack -> getMostNested
+
+getMainSubJoinEdges -> formatCluster
+getMainSubJoinEdges -> massageTableCol
+
+SelectAndSubselects.process -> getSqlStack
+SelectAndSubselects.process -> simpleQuery2Dot
+SelectAndSubselects.process -> subGraphDotRunner
+SelectAndSubselects.process -> simpleQuery2Dot
+SelectAndSubselects.process -> subGraphDotRunner
+SelectAndSubselects.process -> getMainSubJoinEdges
+SelectAndSubselects.process -> fixMainSubJoinEdges
+
+simpleQuery2Dot -> SingleSelect_process
+simpleQuery2Dot -> DotOutput_process
+query2Dot ->  SelectAndSubselects_process
+
+#class main
+main -> initGlobalGrammar
+main -> openAnything
+main -> query2Dot
+
+}
