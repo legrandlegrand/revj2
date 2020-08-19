@@ -1,9 +1,9 @@
-digraph call_tree
+digraph call_graph
 {
 layout=fdp
 
 initGlobalGrammar -> keywordParensFromList
-initGlobalGrammar -> keywordFromList
+# initGlobalGrammar -> keywordFromList
 
 
 checkParensHelper -> BadParensException
@@ -49,7 +49,7 @@ QuoteRemover_process -> checkParens
 
 #class Simplifier
 
-__init__ -> reset
+Simplifier__init__ -> Simplifier_reset
 replaceAggregs -> keywordFromList
 replaceAggregs -> distinctAggregsHelper
 runRemovers -> runRegexRemoverConstantOps
@@ -58,7 +58,7 @@ runRemovers -> runRegexRemoverConstEqualConst
 Simplifier_process -> reduceBinops
 Simplifier_process -> replaceAggregs
 Simplifier_process -> reduceOuterJoin
-Simplifier_process -> reset
+Simplifier_process -> Simplifier_reset
 Simplifier_process -> buildRemovers
 Simplifier_process -> runRemovers
 Simplifier_process -> reduceOrderGroup
@@ -69,10 +69,10 @@ getLastDot -> MallformedSQLException
 
 #class SingleSelect
 
-__init__ -> reset
+SingleSelect__init__ -> SingleSelect_reset
 sanityCheckColumns -> REVJProcessingException
 sanityCheckColumns -> REVJProcessingException
-checkAmbiguousColumns -> AmbiguousColumnException(
+checkAmbiguousColumns -> AmbiguousColumnException
 subprocessSelectColumns -> checkIdentifier
 aggregLambda -> reverseComparisonSign
 aggregLambda -> addAliasIfOK
@@ -114,7 +114,7 @@ processWhereGroupOrderHaving -> subprocessAggregs
 sanityCheckTables -> getFirstTwoDots
 sanityCheckTables -> getLastDot
 sanityCheckTables -> MallformedSQLException
-SingleSelect_process -> reset
+SingleSelect_process -> SingleSelect_reset
 SingleSelect_process -> revQuotedConsts
 SingleSelect_process -> getQuotedConstsDict
 SingleSelect_process -> subprocessUnions
@@ -135,7 +135,7 @@ SingleSelect_process -> checkAmbiguousColumns
 SingleSelect_process -> sanityCheckTables
 SingleSelect_process -> addStarToAllTables
 
-#class DotOutput:
+#class DotOutput
 
 isInParent -> extractParent
 formatField -> getLastDot
@@ -180,14 +180,16 @@ getSqlStack -> getMostNested
 getMainSubJoinEdges -> formatCluster
 getMainSubJoinEdges -> massageTableCol
 
-SelectAndSubselects.process -> getSqlStack
-SelectAndSubselects.process -> simpleQuery2Dot
-SelectAndSubselects.process -> subGraphDotRunner
-SelectAndSubselects.process -> simpleQuery2Dot
-SelectAndSubselects.process -> subGraphDotRunner
-SelectAndSubselects.process -> getMainSubJoinEdges
-SelectAndSubselects.process -> fixMainSubJoinEdges
+SelectAndSubselects_process -> getSqlStack
+SelectAndSubselects_process -> simpleQuery2Dot
+SelectAndSubselects_process -> subGraphDotRunner
+SelectAndSubselects_process -> simpleQuery2Dot
+SelectAndSubselects_process -> subGraphDotRunner
+SelectAndSubselects_process -> getMainSubJoinEdges
+SelectAndSubselects_process -> fixMainSubJoinEdges
 
+simpleQuery2Dot -> Simplifier_process
+simpleQuery2Dot -> QuoteRemover_process
 simpleQuery2Dot -> SingleSelect_process
 simpleQuery2Dot -> DotOutput_process
 query2Dot ->  SelectAndSubselects_process
