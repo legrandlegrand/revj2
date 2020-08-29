@@ -102,7 +102,7 @@ def keywordParensFromList(l):
 Another alternative is to have these at top level ... """
 def initGlobalGrammar():		
 	#MySQL speciffic, add others later
-	globals()["aggregatesAsList"] = ('avg bit_and bit_or bit_xor count ff '
+	globals()["aggregatesAsList"] = ('avg bit_and bit_or bit_xor count '
 		'group_concat '
 		'first last max min std '
 		'stddev_pop stddev_samp stddev stddevp '
@@ -114,7 +114,7 @@ def initGlobalGrammar():
 		('select from where group having order and or not null exists is as ' +
 		'in asc desc ' + 
 		'by on inner outer left right full cross join using ' +
-#ply		'case when then end ' + 
+		'case when then end ' + 
 		'distinct limit ' +
 		'separator').split(' ') + aggregatesAsList
 	
@@ -323,8 +323,8 @@ class QuoteRemover(SanityChecker):
 		res = s
 		res = self.removeMySQLdialect(res)
 		res = self.removeMSdialect(res)
-#ply		res = self.removePGdialect(res)
-#ply		res = self.removeCaseWhen(res)
+		res = self.removePGdialect(res)
+		res = self.removeCaseWhen(res)
 		res = self.removeSelectDistinct(res)
 		return res
 	
@@ -348,7 +348,7 @@ class QuoteRemover(SanityChecker):
 		res =  res.replace('::', '')		
 		
 		#drop the slicing operator x[2] or x[2:4]
-		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
+ 		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
 		
 		return res
 				
@@ -576,7 +576,7 @@ class QuoteRemover(SanityChecker):
 		res = res.replace('`', '"')
 		
 		#remove cast
-#ply		res = self.removeCast(res)
+		res = self.removeCast(res)
 
 		#MS SQL specific quoting for aliases 
 		res = self.removeSquareBrackets(res)
@@ -584,7 +584,7 @@ class QuoteRemover(SanityChecker):
 		#dollar substitution. Remove braces, keep dollar
 		res = self.removeCurlyBraces(res)
 		
-#ply		res = self.removeUTF(res)
+		res = self.removeUTF(res)
 		res = self.removeQuoteEscapes(res)
 		res = self.removeTrueFalse(res)
 		
@@ -603,7 +603,7 @@ class QuoteRemover(SanityChecker):
 		#remove stuff irrelevant to diagrams
 		res = self.removeUnknown(res)
 		
-#ply		res = self.removeConst(res)
+		res = self.removeConst(res)
 		
 		res = self.removeQuotedIdent(res)
 
@@ -670,7 +670,30 @@ class Simplifier:
 		oj = loj | roj
 		return oj.transformString(s)
 		
-
+	"""chop sql into small pieces"""
+	def smallChunksGen(all):
+		crtPos = 0
+		parensNest = 0
+		for (pos, ch) in enumerate(all):
+			if ch == '(':
+				parensNest += 1
+			elif ch == ')':
+				parensNest -= 1
+				if parensNest == 0:
+					yield all[crtPos:pos+1]
+					crtPos = pos+1
+		yield all[crtPos:]
+		
+	def runRemoversOnChunks(self, removers, s):
+		res = []
+		for piece in smallChunksGen(s):
+			res.append(self.runRemovers(removers, piece))
+			
+		res = ' '.join(res)
+		return res
+		#once more on the whole thing ?
+		#return self.runRemovers(res)
+			
 		
 	def runRemovers(self, removers, s):
 		x = s
@@ -684,7 +707,7 @@ class Simplifier:
 				x = re.sub("\s*([\+\,])\s*", r"\1", x)
 				
 				x = self.runRegexRemoverConstantOps(x)
-#ply				x = self.runRegexRemoverParensInExpressions(x)
+				x = self.runRegexRemoverParensInExpressions(x)
 				x = self.runRegexRemoverConstEqualConst(x)
 
 				newX = r.transformString(x)
@@ -790,25 +813,25 @@ class Simplifier:
 		self.removers = []
 
 	def process(self, s):
-#ply		x = self.reduceBinops(s)
-#ply		x = self.replaceAggregs(x)
-		x = self.reduceOuterJoin(s)
+		x = self.reduceBinops(s)
+		x = self.replaceAggregs(x)
+		x = self.reduceOuterJoin(x)
 
-#		self.reset()
-#		self.buildRemovers()
-#		res = self.runRemovers(self.removers, x)
+		self.reset()
+		self.buildRemovers()
+
+		res = self.runRemovers(self.removers, x)
 		
-		return self.reduceOrderGroup(x)
+		return self.reduceOrderGroup(res)
 
 
 def checkIdentifier(x):
 	return ( (x.lower() not in reserved) and 
-#ply		(re.search(aggregatesRe, x) is None) and 
+		(re.search(aggregatesRe, x) is None) and 
 		not (x.startswith("'" + QUOTESYMBOL)) )
 	
 def addAliasIfOK(d, k, v):
-#ply	if checkIdentifier(k) and checkIdentifier(v):
-	if checkIdentifier(v):
+	if checkIdentifier(k) and checkIdentifier(v):
 		addAlias(d, k, v)
 
 """insert into d[k] = Set(.. v ..) """
@@ -835,7 +858,7 @@ def getFirstTwoDots(v):
 	if len(temp) == 3:	#schema.table.column
 		return temp[0] + '.' + temp[1]
 
-	raise MallformedSQLException('Too many dots in identifier: %s' % s)
+	raise MallformedSQLException('Too may dots in identifier: %s' % s)
 
 """get table or column name from schema.table.column"""
 def getLastDot(v):
@@ -843,7 +866,7 @@ def getLastDot(v):
 	if len(temp) <= 3:	#schema.table.column
 		return temp[-1]
 
-	raise MallformedSQLException('Too many dots in identifier: %s' % s)
+	raise MallformedSQLException('Too may dots in identifier: %s' % s)
 	
 def splitByCommasWithoutParens(s):
 	res = []
@@ -943,22 +966,16 @@ class SingleSelect:
 		asAlias = Suppress(Keyword('as') + ident)
 		noAliases = asAlias.transformString(s)
 
-#ply		for c in columnName.searchString(noAliases):
+		for c in columnName.searchString(noAliases):
 			#single * is a valid ident, Ex count(*)
-#ply			if checkIdentifier(c[0]) and (('*' not in c[0]) or ('.*' in c[0]) ):
+			if checkIdentifier(c[0]) and (('*' not in c[0]) or ('.*' in c[0]) ):
 				#function names are not columns
-#ply				pat = c[0] + reWS + '\('
-#ply				if not re.search(pat, s):
-#ply					self.columns.add(c[0])
+				pat = c[0] + reWS + '\('
+				if not re.search(pat, s):
+					self.columns.add(c[0])
 
-#ply			if c[0] == '*':
-#ply				self.selectStar = True
-
-#		self.projectionCols.add(noAliases)
-		self.columns.add(noAliases)
-        
-		if noAliases == '*':
-			self.selectStar = True
+			if c[0] == '*':
+				self.selectStar = True
 
 	"""helper for aggregs lambda func"""
 	def aggregLambda(self, x):
@@ -992,27 +1009,25 @@ class SingleSelect:
 	"""SELECT .. FROM ; HAVING .. may contain aggregates
 	for HAVING get whole expression 'sum(x)=100' """
 	def subprocessAggregs(self, s):
-#		s = ',' + s	#easier grammar
+		s = ',' + s	#easier grammar
 
-#		ag = aggregates
-#		agExpr = preFiltersJoins.suppress() + \
-#			(	filterConst.setResultsName("const") +
-#				compar.setResultsName("comp") +
-#				ag.setResultsName('agg') +
-#				"(" +
-#				columnName.setResultsName('inner') +
-#				")" ) | \
-#			(	ag.setResultsName('agg') +
-#				"(" +
-#				columnName.setResultsName('inner') +
-#				")" +
-#				Optional(compar.setResultsName("comp") +
-#					filterConst.setResultsName("const") ) )
+		ag = aggregates
+		agExpr = preFiltersJoins.suppress() + \
+			(	filterConst.setResultsName("const") +
+				compar.setResultsName("comp") +
+				ag.setResultsName('agg') +
+				"(" +
+				columnName.setResultsName('inner') +
+				")" ) | \
+			(	ag.setResultsName('agg') +
+				"(" +
+				columnName.setResultsName('inner') +
+				")" +
+				Optional(compar.setResultsName("comp") +
+					filterConst.setResultsName("const") ) )
 		
-#		agExpr.setParseAction( lambda x: self.aggregLambda(x) )
-#		res = agExpr.transformString(s)
-		self.havings = set([s])
-        
+		agExpr.setParseAction( lambda x: self.aggregLambda(x) )
+		res = agExpr.transformString(s)
 		
 	"""sum(t.a * 100) belongs in table t"""
 	def findTableOfExpression(self, s):
@@ -1043,52 +1058,40 @@ class SingleSelect:
 			try:
 				(exprPart, aliasPart) = part.strip().rsplit(' ', 1)
 				
-#				if ')' in aliasPart:
-				if not aliasPart.isalnum():
+				if ')' in aliasPart:
 					#for example count (distinct x)
-					part = exprPart + ' ' + aliasPart 				
 					raise ValueError	#fall thru no alias
-				else:	
 					
-					exprPart = exprPart.strip()
-					if exprPart.endswith(' as'):
-						exprPart = exprPart[:-3]
-# verifier que c'est bien une expression et pas une operation coupee au milieux, et finissant par . | * ou autre					
-					withoutAliases.append(exprPart)
-
-#ply remplacement checkIdentifier par test alphanum pour ne pas laisser passer de || ou de x.y en alias
-# ne laisse pas passer _ dans le nom d'alias :o(
-#				if checkIdentifier(aliasPart):
-#				if aliasPart.isalnum():
-				#ply position du test a revoir, else a traiter
-					tbl = self.findTableOfExpression(exprPart)
-                    # verifier cas ou tbl not found (=='' ?)
+					
+				exprPart = exprPart.strip()
+				if exprPart.endswith(' as'):
+					exprPart = exprPart[:-3]
+					
+				withoutAliases.append(exprPart)				
+				
+				if checkIdentifier(aliasPart):
+					tbl = self.findTableOfExpression(exprPart)						
 					self.projectionCols.add(tbl + aliasPart)
 										
 					if checkNotExpr(exprPart):
-						addAliasIfOK(self.colAliases, exprPart, aliasPart)
+						addAliasIfOK(self.colAliases, exprPart, aliasPart)					
 					else:
 						if tbl == '':
 							self.exprAliases.add(aliasPart)
 						else:
-						#this is an alias to an expression that depends
-						#only on columns from one table
-							addAliasIfOK(self.colAliases, exprPart, aliasPart)
-#							addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
-# ply add some kind of tablesanitycheck, to be able to raise an exception when table from table.column != from the one in from clause 
+							#this is an alias to an expression that depends
+							#only on columns from one table
+							addAliasIfOK(self.colAliases, tbl + '_', aliasPart)
 			except ValueError:
 				#split fails == no alias
-# ply				if checkNotExpr(part) and checkIdentifier(part):
-# ply					self.projectionCols.add(part)
-				self.projectionCols.add(part)
+				if checkNotExpr(part) and checkIdentifier(part):
+					self.projectionCols.add(part)
 				withoutAliases.append(part)
-# a supprimer ?
-				self.subprocessSelectColumns(part)
 			
 
-#		x = ',' + ','.join(withoutAliases)	#easier grammar
-#		self.subprocessSelectColumns(x)
-#		self.subprocessAggregs(',' + s)
+		x = ',' + ','.join(withoutAliases)	#easier grammar
+		self.subprocessSelectColumns(x)
+		self.subprocessAggregs(',' + s)
 
 	"""restore constant previously processed by QuoteRemover
 	BETWEEN does not need extra enclosing "'" """
@@ -1381,44 +1384,33 @@ class SingleSelect:
 				self.subprocessTablesAliases(part)		
 
 	def processWhereGroupOrderHaving(self, reservedWord, s):
-			
-#ply verifier si les colonnes etaient triees
-		#' '_'*10 appended at the end of the column to show ORDER DESC
-#		if reservedWord == 'order_by':
-		if s[-1] == ';':
-			s = s[:-1]
-			s = ' ' + s  
-#			s = ',' + s + ','
-#			s = s.replace(' desc,', ORDER_DESC_SUFFIX + ',')
-
-#fix to prevent first group by column to vanish (didn't found why) 
-		if reservedWord == 'group_by':
-			if not s[0] == ' ':
-				s = ' ' + s                
-
 		if reservedWord == 'having':
 			self.subprocessAggregs(s)
-
-		for part in splitByCommasWithoutParens(s):
-#ply		for c,start,end in columnName.scanString(s):
-#			if checkIdentifier(c[0]) and \
-#					(('*' not in c[0]) or ('.*' in c[0]) ) and \
-#					(len(compar.searchString(c[0])) == 0):
+			
+		#' '_'*10 appended at the end of the column to show ORDER DESC
+		if reservedWord == 'order_by':
+			if s[-1] == ';':
+				s = s[:-1]
+			s = ',' + s + ','
+			s = s.replace(' desc,', ORDER_DESC_SUFFIX + ',')
+					
+		for c,start,end in columnName.scanString(s):
+			if checkIdentifier(c[0]) and \
+					(('*' not in c[0]) or ('.*' in c[0]) ) and \
+					(len(compar.searchString(c[0])) == 0):			
 				if reservedWord == 'group_by':
-#					self.groups.add(c[0])
-					self.groups.add(part)
+					self.groups.add(c[0])
 				elif reservedWord == 'order_by':
-#					if c[0].endswith(ORDER_DESC_SUFFIX):
+					if c[0].endswith(ORDER_DESC_SUFFIX):
 						#check what is before
-#						if s[:start].strip().endswith(','):
+						if s[:start].strip().endswith(','):
 							#ex: ...,c desc, ...
-#							self.orders.add(c[0])
-#						else:
+							self.orders.add(c[0])
+						else:
 							#ex: ...a+b desc ...
-#							self.orders.add(c[0][:-len(ORDER_DESC_SUFFIX)])
-#					else:
-#						self.orders.add(c[0])
-					self.orders.add(part)
+							self.orders.add(c[0][:-len(ORDER_DESC_SUFFIX)])
+					else:
+						self.orders.add(c[0])
 
 
 	"""table from table.field must match with schema.table"""
@@ -1524,9 +1516,7 @@ class SingleSelect:
 		
 		tmp = set()
 		for p in self.projectionCols:
-#ply			if p.startswith(alias):
-#ply pb avec ff(a.id)
-			if alias in p:
+			if p.startswith(alias):
 				tmp.add(p)
 			else:
 				tmp.add(alias + p)
@@ -1589,7 +1579,7 @@ class SingleSelect:
 		self.sanityCheckColumns()		
 		self.checkAmbiguousColumns()
 		
-#ply a revoir		self.sanityCheckTables()
+		self.sanityCheckTables()
 		self.addStarToAllTables()
 				
 		return self.tableAliases
@@ -1663,7 +1653,7 @@ class DotOutput:
 	#remove funny chars from graphviz edge and node names
 	#(if needed, use quoting in labels ..) 
 	def dotSanitize(self, s):
-		return s.replace('$','').replace('.','__').replace('|','_').replace('\'','_').replace('>','_')
+		return s.replace('$','').replace('.','__')
 		
 	"""drop table name from count(t.x) and count(DISTINCT t.x)
 	also used for HAVING clauses"""
@@ -1681,22 +1671,16 @@ class DotOutput:
 			
 		return fld[:lParenOrSpace+1] + fld[prevDot+1:]
 
-	def formatField(self, c, a):
+	def formatField(self, c):
 		res = []
-#ply pb with  ff(a.id)
-####		lc = getLastDot(c).lower()
-# a revoir pour enlever le prefix table
-		if c.startswith(a + '.'):
-			lc = getLastDot(c).lower()
-		else:
-			lc = c.lower()
+		lc = getLastDot(c).lower()
 		#if c in self.ss.joins or c.upper() in self.ss.joins:
 		#optimize : somehow display one column only once
 		
 		if lc <> '_':
 			#_ means expression alias referring to cols in this table
 			res.append('<%s> ' % self.dotSanitize(lc) )
-			              
+			
 			if c in self.ss.filters:
 				temp = lc + ' '
 				for i in self.ss.filters[c]:
@@ -1717,10 +1701,9 @@ class DotOutput:
 					res.append(self.DistinctFieldFormatter(i))
 
 			if c in self.ss.havings:
-#				for i in self.ss.havings[c]:
+				for i in self.ss.havings[c]:
 					res.append('HAVING %s' %
-#						self.dotUnQuote(self.DistinctFieldFormatter(i)))
-						self.dotUnQuote(c))
+						self.dotUnQuote(self.DistinctFieldFormatter(i)))
 
 			#in case there are no joins, no filters ...
 			if len(res) == 1:
@@ -1761,13 +1744,11 @@ class DotOutput:
 
 		sortedCols = []
 		for c in self.ss.columns:
-#ply			if getFirstTwoDots(c) == a:
-# ko avec ff(a.id)
-			if a == c or a + '.' in c: 
+			if getFirstTwoDots(c) == a:
 				sortedCols.append(c)
 
 		for c in sorted(sortedCols):
-			res.append('|' + self.formatField(c,a) )
+			res.append('|' + self.formatField(c) )
 
 		res.append('"];')
 		return ''.join(res)
@@ -2180,8 +2161,8 @@ def subGraphDotRunner(dot, algo):
 	res = f.readlines()
 	f.close()	
 	
-#ply	os.remove(dotFile[1])
-#ply	os.remove(resFile[1])
+	os.remove(dotFile[1])
+	os.remove(resFile[1])
 	
 	assert len(res) > 3
 	
