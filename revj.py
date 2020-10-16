@@ -1044,7 +1044,7 @@ class SingleSelect:
 				(exprPart, aliasPart) = part.strip().rsplit(' ', 1)
 				
 #				if ')' in aliasPart:
-				if not aliasPart.isalnum():
+				if not aliasPart.replace('_', '').replace('#', '').isalnum():
 					#for example count (distinct x)
 					part = exprPart + ' ' + aliasPart 				
 					raise ValueError	#fall thru no alias
