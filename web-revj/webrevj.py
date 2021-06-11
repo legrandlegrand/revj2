@@ -51,7 +51,7 @@ def getMapping(sql, algo, dist, png, err):
 	return mapping
 
 class WebRevj:
-    def index(self, sql=DEFSQL, algo=DEFALGO, dist='1'):
+	def index(self, sql=DEFSQL, algo=DEFALGO, dist='1'):
 		if (DEFSQL == sql) and (DEFALGO == algo) and ('1' == dist):
 			return tmpl.safe_substitute(
 				getMapping(sql, algo, dist, DEF_PNG, ''))
@@ -69,7 +69,7 @@ class WebRevj:
 			
 		#this is a fileHandle !!
 		dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
-		os.write(dotFile[0], dot)
+		os.write(dotFile[0], dot.encode())
 		os.close(dotFile[0])
 		
 		pngFile = tempfile.mkstemp('.png', '', STATICDIR)
@@ -82,7 +82,7 @@ class WebRevj:
 		return tmpl.safe_substitute(
 			getMapping(sql, algo, dist, pngFile[1], err))
        
-    index.exposed = True
+	index.exposed = True
 
 
 if __name__ == '__main__':
