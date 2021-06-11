@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 import re, sys, tempfile
 from pyparsing import *
 from constants import *
+from functools import reduce
 
 """  r"''" used to be there, but it removes empty string constants"""
 ESCAPEDQUOTES = ['""', r'\"', r"\'"]
@@ -220,7 +221,6 @@ def initGlobalGrammar():
 
 	#includes funcs without params ex: curdate()
 	globals()["filterConst"] = intNum | quotedConst | \
-		Group(ident + Literal("(") + Literal(")") ) | \
 		bind
 		
 	globals()["inConstruct"] = "(" + reCompar + "|" + r"\s" + '[iI][nN]' + reWS + ")"
@@ -348,7 +348,7 @@ class QuoteRemover(SanityChecker):
 		res =  res.replace('::', '')		
 		
 		#drop the slicing operator x[2] or x[2:4]
- 		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
+		res = re.sub(r"\[[0-9]+(:[0-9]+)?\]", '', res)
 		
 		return res
 				
@@ -419,7 +419,6 @@ class QuoteRemover(SanityChecker):
 		if x in d:
 			#function is called over and over. Constant is replaced in SQL 
 			#if done == it is having integer key
-			assert int(str(d[x])) == d[x]
 			return " '%s%d' " % (QUOTESYMBOL, d[x])
 		else:
 			l = len(d)
@@ -639,10 +638,10 @@ class Simplifier:
 	
 	def distinctAggregsHelper(self, x):
 		aggToReplace = aggregatesAsList.index(x.agg)
-		if x.dist <> '':
+		if x.dist != '':
 			aggToReplace += AGG_DISTINCT 
 		res = x.pre + " _%d_agg(" % aggToReplace
-		return res		
+		return res
 	
 	""" there are a lot of aggregation funcs. This slows parsing 
 	replace sum(x) with 0__agg(x) """
@@ -952,7 +951,7 @@ class SingleSelect:
 				(r not in self.orders) and \
 				(r + ORDER_DESC_SUFFIX not in self.orders):
 				#aliases & orders are columns too, but have no table prefix !!
-				if len(r.split('.')) < 2 and r <> '*':
+				if len(r.split('.')) < 2 and r != '*':
 					raise AmbiguousColumnException(
 						"use table.field instead of %s!" % r)
 
@@ -995,7 +994,7 @@ class SingleSelect:
 		"""need to use alias.field into self.aggregs and self.havings
 		later on, DotOutput will drop the "alias." """
 		
-		if x.comp <> '' and x.const <> '':
+		if x.comp != '' and x.const != '':
 			newComp = self.reverseComparisonSign(x)
 			addAliasIfOK(self.havings, x.inner, 
 				aggregatesAsList[aggIdx].upper() + 
@@ -1110,7 +1109,7 @@ class SingleSelect:
 			
 		try:
 			dummy = int(c[1 + len(QUOTESYMBOL):-1])
-		except ValueError, TypeError:
+		except ValueError as TypeError:
 			return c
 
 		try:
@@ -1418,18 +1417,18 @@ class SingleSelect:
 		aliasesFromColumns = set( [getFirstTwoDots(x) for x in self.columns] )
 		#get table names
 		tablesAndAliases = set( [getLastDot(x) for x in 
-			self.tableAliases.keys() + self.parentTables.keys()] )
+			list(self.tableAliases.keys()) + list(self.parentTables.keys())] )
 
 		#get schema from schema.table
 		tablesAndAliases = tablesAndAliases.union(self.tableAliases.keys())
 			
-		for tas in self.tableAliases.values() + self.parentTables.values():
+		for tas in list(self.tableAliases.values()) + list(self.parentTables.values()):
 			#append from set of aliases
 			tablesAndAliases = tablesAndAliases.union(
 				set( [getLastDot(x) for x in tas] ) )
 								
 		for t in aliasesFromColumns:
-			if t <> '' and t not in tablesAndAliases:
+			if t != '' and t not in tablesAndAliases:
 				raise MallformedSQLException(
 					'identifier %s refers to unknown table or alias' % t)
 
@@ -1468,11 +1467,11 @@ class SingleSelect:
 		if len(self.tableAliases) != 1:
 			return
 			
-		(tbl, alias) = self.tableAliases.items()[0]		
+		(tbl, alias) = list(self.tableAliases.items())[0]
 		
 		try:
 			alias = list(alias)[0] #tbl -> set of aliases, remember?
-		except TypeError, IndexError:
+		except TypeError as IndexError:
 			alias = tbl
 			
 		alias = alias + '.'
@@ -1481,7 +1480,7 @@ class SingleSelect:
 		#it could do keys() part of joins, but usually joins require 
 		#_several_ tables. For now, the self joins have to be written by hand
 		for s in 'aggregs filters colAliases havings'.split():
-			for j in eval('self.' + s):
+			for j in eval('self.' + s).copy():
 				if '.' not in j:	
 					cmd = 'self.%s[alias + "%s"] = self.%s.pop("%s")' % \
 						(s, j, s, j)
@@ -1543,7 +1542,7 @@ class SingleSelect:
 		
 		"""MultipleSelectsException is different because
 		it can be handled with subselect"""
-		if len([i for i in parts if i.startswith('select')]) <> 1:
+		if len([i for i in parts if i.startswith('select')]) != 1:
 			raise MultipleSelectsException(
 				'Only one [select] expected in [%s]' % s)
 				
@@ -1560,7 +1559,7 @@ class SingleSelect:
 					'Only one [%s] expected in [%s]' % (i, s) )
 
 		self.processColAliases(parts[2])
-		for i in xrange(len(parts)-3):
+		for i in range(len(parts)-3):
 			if parts[i + 3] == ' from ':
 				self.processTables(parts[i + 4])
 				self.subprocessSubselectAlias(parts[i + 4])
@@ -1623,8 +1622,8 @@ class DotOutput:
 					if SUBSELECT in i:
 						return int(i[len(SUBSELECT):])
 		
-	def isInParent(self, x):			
-		if (x in self.ss.tableAliases) or (x in reduce(set.union, self.ss.tableAliases.values())):
+	def isInParent(self, x):
+		if (x in self.ss.tableAliases) or (x in reduce(set.union, list(self.ss.tableAliases.values()))):
 			return -1
 			
 		res = []
@@ -1638,7 +1637,7 @@ class DotOutput:
 					res.append( self.extractParent(t) )
 					
 		if len(res) > 1:
-			print "gaga"
+			print ("gaga")
 			raise Exception("duplicated parent tables/aliases")
 		elif len(res) == 1:
 			return res[0]
@@ -1677,7 +1676,7 @@ class DotOutput:
 		#if c in self.ss.joins or c.upper() in self.ss.joins:
 		#optimize : somehow display one column only once
 		
-		if lc <> '_':
+		if lc != '_':
 			#_ means expression alias referring to cols in this table
 			res.append('<%s> ' % self.dotSanitize(lc) )
 			
@@ -1808,7 +1807,7 @@ class DotOutput:
 		else:
 			color = 'black'
 
-		res += ' [color = %s %s]' % (color, outer)
+		res += ' [color = %s %s dir=both]' % (color, outer)
 
 		return res + ';'
 
@@ -1916,7 +1915,7 @@ class SelectAndSubselects:
 			
 		"""parens provide clear separation of the subquery"""
 		parens = 0
-		for i in xrange(len(s)):
+		for i in range(len(s)):
 			if s[i] == '(':
 				parens += 1
 			if s[i] == ')':
@@ -1939,9 +1938,9 @@ class SelectAndSubselects:
 			return (0, len(s))
 
 		fragments = [fragSep[0]] + \
-			[fragSep[2*i+1] + fragSep[2*i+2] for i in xrange(len(fragSep)/2)]
+			[fragSep[2*i+1] + fragSep[2*i+2] for i in range(int(len(fragSep)/2))]
 						
-		nesting = map(self.parenCount, fragments)
+		nesting = list(map(self.parenCount, fragments))
 		
 		#the SELECT fragment that closes the most parens is the most nested
 		#the first SELECT is not ok
@@ -1980,7 +1979,7 @@ class SelectAndSubselects:
 		else:
 			#if there is one table, prefix column with table
 			if len(t) == 1 and len(tableAliases) == 1:
-				a = tableAliases.keys()[0]
+				a = list(tableAliases.keys())[0]
 				try:
 					aliases = list(tableAliases.values()[0])
 					a = [i for i in aliases if not(i.startswith(SUBSELECT))][0]
@@ -2054,7 +2053,7 @@ class SelectAndSubselects:
 		joinsFromParent = []
 		joinsFromSubselects = []
 		
-		projectionCols = [set() for x in xrange(len(sqlStack))]
+		projectionCols = [set() for x in range(len(sqlStack))]
 		
 		clusters = []
 		i = len(sqlStack)
@@ -2147,7 +2146,7 @@ def simpleQuery2Dot(s, clusterNr = 0, parentTables = {}, resultTables = {}):
 #those are rendering the final image .. 
 def subGraphDotRunner(dot, algo):
 	dotFile = tempfile.mkstemp('.dot', '', STATICDIR)
-	os.write(dotFile[0], dot)
+	os.write(dotFile[0], dot.encode())
 	os.close(dotFile[0])
 	
 	resFile = tempfile.mkstemp('.dot', '', STATICDIR)
@@ -2184,8 +2183,8 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		fileLike = openAnything(sys.argv[1])
 		s = fileLike.read()
-		print query2Dot(s)
+		print(query2Dot(s))
 	else:
 		import unittest
-		exec open('tests.py').read()
+		exec(open('tests.py').read())
 		unittest.main()
