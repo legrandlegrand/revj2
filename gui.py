@@ -22,7 +22,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
 import os, platform, sys, traceback
-from Tkinter import *
+from tkinter import *
 from revj import *
 
 from constants import *

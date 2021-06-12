@@ -142,8 +142,8 @@ class QuoteRemoverTestCase(unittest.TestCase):
 	def testRemoveDoubleQuotes(self):
 		res = [""" "my table"."my column\" is "" long '' """,
 			""" 'a''b\'c\'d' """]
-		res = map(self.qr.removeQuoteEscapes, res)
-		res = map(self.qr.removeQuotedIdent, res)
+		res = list(map(self.qr.removeQuoteEscapes, res))
+		res = list(map(self.qr.removeQuotedIdent, res))
 		for r in res:
 			for q in ESCAPEDQUOTES:
 				assert q not in res + [' ']
@@ -1325,7 +1325,7 @@ class DotOutputTestCase(unittest.TestCase):
 					self.si.process(
 						self.qr.process(s)))
 		if verbose:
-			print '*'*5, self.si.process(self.qr.process(s))
+			print ('*'*5, self.si.process(self.qr.process(s)))
 		return self.dot.process()[0]
 
 	def testSimple(self):
