@@ -1,10 +1,7 @@
 Installation
 ============
-Install Graphviz (tested with ver 2.20)
-Install Python (tested with ver 2.4, 2.5 and 2.6)
-Install Pyparsing (tested with ver 1.4.5)
-
-
+Install Graphviz (tested with ver 2.38 and 2.43)
+Install Python (tested with ver 3.8 and 3.9)
 
 Self-tests
 ==========
@@ -35,8 +32,6 @@ python gui.py
 Bugs and Limitations
 ====================
 Please qualify columns with aliases. Instead of "select a from table" use "select t.a from table t". This is trivial to fix for one table, however in general it does require access to the database. Instead of "Select name, id, dep_name from person inner join department..." use ""Select p.name, p.id, d.dep_name from person p inner join department d .."
-
-Subselects are not fully working at this moment. For subselects use "one-pass"
 
 
 Generating a diagram from standard input
